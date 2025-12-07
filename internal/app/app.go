@@ -59,7 +59,7 @@ func Run(ctx context.Context, opts Options) error {
 
 	if opts.CopilotCmd == "" {
 		if opts.Action == actionApply {
-			opts.CopilotCmd = "copilot --allow-all-tools"
+			opts.CopilotCmd = "copilot --allow-all-tools --allow-all-paths"
 		} else {
 			opts.CopilotCmd = "copilot"
 		}
