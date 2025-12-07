@@ -1,17 +1,47 @@
 # gh-pr-feedback
 
-A GitHub CLI extension that collects every issue + review comment on the current pull request, renders them as Markdown or JSON, optionally routes the Markdown to Copilot CLI for summarization, and can post a follow-up reply back to the PR.
+[![CI](https://github.com/robert-crandall/gh-pr-feedback/actions/workflows/ci.yml/badge.svg)](https://github.com/robert-crandall/gh-pr-feedback/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/robert-crandall/gh-pr-feedback)](https://goreportcard.com/report/github.com/robert-crandall/gh-pr-feedback)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Installation
+A GitHub CLI extension that collects every issue + review comment on the current pull request, renders them as Markdown or JSON, optionally routes feedback to Copilot CLI for summarization, and can even have Copilot **apply fixes** directly to your code.
+
+<!-- Uncomment after recording demo.gif with: vhs demo.tape -->
+<!-- ![Demo](demo.gif) -->
+
+## ✨ Features
+
+- 📋 **Summarize** – Render all PR feedback as clean Markdown
+- 📦 **Export** – Dump raw JSON for scripting and automation
+- 🤖 **Copilot Integration** – Summarize feedback or apply fixes with GitHub Copilot CLI
+- 💬 **Reply** – Post a follow-up comment back to the PR
+
+## 📦 Installation
+
+### From GitHub (recommended)
 
 ```bash
-# From this repository root
+gh extension install robert-crandall/gh-pr-feedback
+```
+
+### From source
+
+```bash
+git clone https://github.com/robert-crandall/gh-pr-feedback.git
 cd gh-pr-feedback
 go build .
 gh extension install .
 ```
 
-## Usage
+### From releases
+
+Download the appropriate binary from [Releases](https://github.com/robert-crandall/gh-pr-feedback/releases), extract it, and run:
+
+```bash
+gh extension install .
+```
+
+## 🚀 Usage
 
 ```bash
 # Summarize feedback for the PR detected in the current repo
@@ -21,42 +51,95 @@ gh pr-feedback --action summary
 gh pr-feedback --pr 42 --owner octo-org --repo demo --action raw
 
 # Send feedback through Copilot CLI for summarization
-gh pr-feedback --action copilot --copilot-cmd "copilot"
+gh pr-feedback --action copilot
 
 # Apply reviewer feedback with Copilot CLI (auto-approves tool usage)
-gh pr-feedback --action apply --copilot-cmd "copilot --allow-all-tools"
+gh pr-feedback --action apply
 
 # Write Markdown to a file and post a "no action" reply
 gh pr-feedback --action summary --output feedback.md --post-reply "No additional changes required."
 ```
 
-### Flags
+## ⚙️ Flags
 
-- `--pr`: Override the PR number. When set, provide `--owner` and `--repo` or run inside the target repo.
-- `--owner`, `--repo`: Repository coordinates used with `--pr`.
-- `--action`: `summary` (default), `raw`, `copilot`, or `apply`.
-- `--output`: Write the rendered output (Markdown or JSON) to a file.
-- `--post-reply`: Body of a new issue comment to post back to the PR.
-- `--copilot-cmd`: Command invoked when `--action` is `copilot` or `apply`. Quoted value is parsed with shell-style rules, so you can include arguments. For `apply`, the default is `copilot --allow-all-tools`, and the tool appends `-p "<instructions>"` for each file with review feedback.
-- `--quiet`: Suppress log messages.
+| Flag | Description |
+|------|-------------|
+| `--pr` | Override the PR number. When set, provide `--owner` and `--repo` or run inside the target repo. |
+| `--owner`, `--repo` | Repository coordinates used with `--pr`. |
+| `--action` | `summary` (default), `raw`, `copilot`, or `apply`. |
+| `--output` | Write the rendered output (Markdown or JSON) to a file. |
+| `--post-reply` | Body of a new issue comment to post back to the PR. |
+| `--copilot-cmd` | Command invoked for `copilot` or `apply` actions. Default: `copilot` (summary) or `copilot --allow-all-tools` (apply). |
+| `--quiet` | Suppress log messages. |
 
-## Development
+## 🤖 Copilot Integration
+
+### Summarize mode (`--action copilot`)
+
+Pipes all PR feedback to Copilot CLI for AI-powered summarization:
 
 ```bash
-go test ./...
-go fmt ./...
+gh pr-feedback --action copilot
 ```
 
-## Removing
+### Apply mode (`--action apply`)
 
-Remove via CLI
+Has Copilot evaluate each piece of review feedback and either apply fixes or explain why no changes are needed:
+
+```bash
+gh pr-feedback --action apply
 ```
+
+> 💡 **Tip:** The apply mode uses `copilot --allow-all-tools` by default to auto-approve file edits. Override with `--copilot-cmd` if you want manual confirmation.
+
+## 🛠️ Development
+
+```bash
+# Build
+make build
+
+# Run tests
+make test
+
+# Run linter
+make lint
+
+# Format code
+make fmt
+
+# Run all checks
+make check
+
+# Generate coverage report
+make coverage
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+## 🎬 Recording the Demo
+
+This project uses [VHS](https://github.com/charmbracelet/vhs) for terminal recordings:
+
+```bash
+# Install VHS
+brew install vhs  # macOS
+
+# Record the demo
+make demo
+```
+
+## 📄 License
+
+[MIT](LICENSE) © Robert Crandall
+
+## 🗑️ Removing
+
+```bash
 gh extension remove gh-pr-feedback
 ```
 
-Or delete manually
-```
+Or manually:
+
+```bash
 rm -rf ~/.config/gh/extensions/gh-pr-feedback
 ```
-
-The extension uses the authenticated `gh` environment for both REST calls and shelling out to `gh pr view`/`gh repo view` when it needs context.
