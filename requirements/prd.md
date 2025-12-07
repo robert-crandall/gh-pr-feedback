@@ -16,7 +16,7 @@ A GitHub CLI extension (`gh-pr-feedback`) that, from your current PR context, fe
      - `--action` (`summary` | `raw` | `copilot`) — default `summary`
      - `--output` (write Markdown to file)
      - `--post-reply` (string to post back to PR)
-     - `--copilot-cmd` (default `github-copilot-cli`)
+     - `--copilot-cmd` (default `copilot`)
    - Optional future: `--filter-author`, `--since`, `--file`.
 
 3) **Resolve PR context**
@@ -40,7 +40,7 @@ A GitHub CLI extension (`gh-pr-feedback`) that, from your current PR context, fe
    - `raw`: JSON to stdout.
    - `copilot`: Markdown piped to Copilot CLI with a prompt like:
      - “You are a code assistant. Summarize feedback and propose concrete code changes. If no changes are needed, explain why.”
-   - Configurable `--copilot-cmd` to support `github-copilot-cli`, `copilot`, or `gh copilot`.
+   - Configurable `--copilot-cmd` to support `copilot`, or `gh copilot`.
 
 7) **Optional: post a reply**
    - If `--post-reply` provided: `POST /repos/{owner}/{repo}/issues/{issue_number}/comments` with the body; print the URL on success.
@@ -60,5 +60,5 @@ A GitHub CLI extension (`gh-pr-feedback`) that, from your current PR context, fe
     - `gh extension publish`
     - README with usage examples:
       - `gh pr-feedback --action summary > feedback.md`
-      - `gh pr-feedback --action copilot --copilot-cmd github-copilot-cli`
+      - `gh pr-feedback --action copilot --copilot-cmd copilot`
       - `gh pr-feedback --post-reply "No changes needed because ..."`

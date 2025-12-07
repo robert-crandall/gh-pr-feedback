@@ -56,6 +56,6 @@ func init() {
 	rootCmd.Flags().StringVar(&flagAction, "action", "summary", "Action to perform: summary, raw, or copilot")
 	rootCmd.Flags().StringVar(&flagOutput, "output", "", "Write Markdown output to the specified file")
 	rootCmd.Flags().StringVar(&flagPostReply, "post-reply", "", "Post the provided text as a new PR comment after fetching feedback")
-	rootCmd.Flags().StringVar(&flagCopilot, "copilot-cmd", "github-copilot-cli", "Command used when --action copilot is selected")
+	rootCmd.Flags().StringVar(&flagCopilot, "copilot-cmd", "copilot", "Command used when --action copilot is selected")
 	rootCmd.Flags().BoolVar(&flagQuiet, "quiet", false, "Suppress non-essential log output")
 }
