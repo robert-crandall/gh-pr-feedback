@@ -349,7 +349,7 @@ func buildApplyInstructions(comments []model.ReviewComment) []applyInstruction {
 		if content == "" {
 			continue
 		}
-		content = content + "\n\nEnsure other unrelated code remains unchanged."
+		content = content + "\n\nThis is PR feedback and might not be correct. If the feedback is correct, fix the problem. If it is not correct, provide an answer to the feedback.\n\nEnsure other unrelated code remains unchanged."
 		results = append(results, applyInstruction{Path: path, Instructions: content})
 	}
 	return results
