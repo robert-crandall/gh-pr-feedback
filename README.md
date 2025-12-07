@@ -40,6 +40,9 @@ Download the appropriate binary from [Releases](https://github.com/robert-cranda
 
 ```bash
 gh extension install .
+
+# To reinstall:
+go build . && gh extension remove gh-pr-feedback && gh extension install .
 ```
 
 ## 🚀 Usage
@@ -70,7 +73,7 @@ gh pr-feedback --action summary --output feedback.md --post-reply "No additional
 | `--action` | `summary` (default), `raw`, `copilot`, or `apply`. |
 | `--output` | Write the rendered output (Markdown or JSON) to a file. |
 | `--post-reply` | Body of a new issue comment to post back to the PR. |
-| `--copilot-cmd` | Command invoked for `copilot` or `apply` actions. Default: `copilot` (summary) or `copilot --allow-all-tools` (apply). |
+| `--copilot-cmd` | Command invoked for `copilot` or `apply` actions. Default: `copilot` (summary) or `copilot --allow-all-tools --allow-all-paths` (apply). |
 | `--quiet` | Suppress log messages. |
 
 ## 🤖 Copilot Integration
