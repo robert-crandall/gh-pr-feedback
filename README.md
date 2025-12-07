@@ -12,6 +12,7 @@ A GitHub CLI extension that collects every issue + review comment on the current
 ## ✨ Features
 
 - 📋 **Summarize** – Render all PR feedback as clean Markdown
+- 🎯 **Unresolved Only** – Automatically filters to unresolved review threads (no noise from addressed feedback)
 - 📦 **Export** – Dump raw JSON for scripting and automation
 - 🤖 **Copilot Integration** – Summarize feedback or apply fixes with GitHub Copilot CLI
 - 💬 **Reply** – Post a follow-up comment back to the PR
@@ -73,6 +74,8 @@ gh pr-feedback --action summary --output feedback.md --post-reply "No additional
 | `--quiet` | Suppress log messages. |
 
 ## 🤖 Copilot Integration
+
+> **Note:** Review comments are automatically filtered to **unresolved threads only**. Resolved feedback is excluded so Copilot focuses on what still needs attention.
 
 ### Summarize mode (`--action copilot`)
 

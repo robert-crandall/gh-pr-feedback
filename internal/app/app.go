@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/google/shlex"
@@ -69,13 +70,18 @@ func Run(ctx context.Context, opts Options) error {
 }
 
 type runner struct {
-	opts       Options
-	restClient *api.RESTClient
+	opts          Options
+	restClient    *api.RESTClient
+	graphqlClient *api.GraphQLClient
 }
 
 func (r *runner) run(ctx context.Context) error {
 	var err error
 	r.restClient, err = api.NewRESTClient(api.ClientOptions{})
+	if err != nil {
+		return err
+	}
+	r.graphqlClient, err = api.NewGraphQLClient(api.ClientOptions{})
 	if err != nil {
 		return err
 	}
@@ -197,14 +203,110 @@ func (r *runner) fetchIssueComments(ctx context.Context, pr prContext) ([]model.
 }
 
 func (r *runner) fetchReviewComments(ctx context.Context, pr prContext) ([]model.ReviewComment, error) {
-	return paginate(func(page int) ([]model.ReviewComment, error) {
-		path := fmt.Sprintf("repos/%s/%s/pulls/%d/comments?per_page=%d&page=%d", url.PathEscape(pr.Owner), url.PathEscape(pr.Repo), pr.Number, pageSize, page)
-		var chunk []model.ReviewComment
-		if err := r.restClient.DoWithContext(ctx, http.MethodGet, path, nil, &chunk); err != nil {
-			return nil, err
+	const query = `
+query($owner: String!, $repo: String!, $pr: Int!, $cursor: String) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $pr) {
+      reviewThreads(first: 100, after: $cursor) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          isResolved
+          comments(first: 100) {
+            nodes {
+              id
+              author { login }
+              body
+              path
+              line
+              originalLine
+              url
+              createdAt
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`
+	var allComments []model.ReviewComment
+	var cursor *string
+
+	for {
+		variables := map[string]interface{}{
+			"owner":  pr.Owner,
+			"repo":   pr.Repo,
+			"pr":     pr.Number,
+			"cursor": cursor,
 		}
-		return chunk, nil
-	})
+
+		var resp struct {
+			Repository struct {
+				PullRequest struct {
+					ReviewThreads struct {
+						PageInfo struct {
+							HasNextPage bool   `json:"hasNextPage"`
+							EndCursor   string `json:"endCursor"`
+						} `json:"pageInfo"`
+						Nodes []struct {
+							IsResolved bool `json:"isResolved"`
+							Comments   struct {
+								Nodes []struct {
+									ID     string `json:"id"`
+									Author struct {
+										Login string `json:"login"`
+									} `json:"author"`
+									Body         string `json:"body"`
+									Path         string `json:"path"`
+									Line         *int   `json:"line"`
+									OriginalLine *int   `json:"originalLine"`
+									URL          string `json:"url"`
+									CreatedAt    string `json:"createdAt"`
+								} `json:"nodes"`
+							} `json:"comments"`
+						} `json:"nodes"`
+					} `json:"reviewThreads"`
+				} `json:"pullRequest"`
+			} `json:"repository"`
+		}
+
+		if err := r.graphqlClient.DoWithContext(ctx, query, variables, &resp); err != nil {
+			return nil, fmt.Errorf("graphql reviewThreads: %w", err)
+		}
+
+		for _, thread := range resp.Repository.PullRequest.ReviewThreads.Nodes {
+			// Only include unresolved threads
+			if thread.IsResolved {
+				continue
+			}
+			for _, c := range thread.Comments.Nodes {
+				comment := model.ReviewComment{
+					User:         model.CommentUser{Login: c.Author.Login},
+					Body:         c.Body,
+					Path:         c.Path,
+					Line:         c.Line,
+					OriginalLine: c.OriginalLine,
+					HTMLURL:      c.URL,
+				}
+				if c.CreatedAt != "" {
+					if t, err := time.Parse(time.RFC3339, c.CreatedAt); err == nil {
+						comment.CreatedAt = t
+					}
+				}
+				allComments = append(allComments, comment)
+			}
+		}
+
+		if !resp.Repository.PullRequest.ReviewThreads.PageInfo.HasNextPage {
+			break
+		}
+		cursor = &resp.Repository.PullRequest.ReviewThreads.PageInfo.EndCursor
+	}
+
+	return allComments, nil
 }
 
 func (r *runner) runCopilot(ctx context.Context, markdown string) error {
