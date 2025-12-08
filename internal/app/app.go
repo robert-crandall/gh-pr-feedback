@@ -105,7 +105,7 @@ func (r *runner) run(ctx context.Context) error {
 
 	var rendered string
 	switch action {
-	case actionSummary:
+	case actionMarkdown:
 		rendered = render.Markdown(feedback)
 		if _, err := fmt.Fprint(r.opts.Stdout, rendered); err != nil {
 			return err
