@@ -10,13 +10,14 @@ before:
 builds:
   - id: gh-pr-feedback
     main: .
-    binary: gh-pr-feedback
+    # Binary name must match: gh-EXTENSION-NAME-OS-ARCH for gh extension install
+    binary: >-
+      {{ .ProjectName }}-{{ .Os }}-{{ .Arch }}
     env:
       - CGO_ENABLED=0
     goos:
       - linux
       - darwin
-      - windows
     goarch:
       - amd64
       - arm64
@@ -25,15 +26,10 @@ builds:
 
 archives:
   - id: default
-    format: tar.gz
+    format: binary
+    # No archive wrapping - gh CLI expects raw binaries
     name_template: >-
-      {{ .ProjectName }}_{{ .RawVersion }}_{{ .Os }}_{{ .Arch }}
-    format_overrides:
-      - goos: windows
-        format: zip
-    files:
-      - README.md
-      - LICENSE
+      {{ .ProjectName }}-{{ .Os }}-{{ .Arch }}
 
 checksum:
   name_template: 'checksums.txt'
