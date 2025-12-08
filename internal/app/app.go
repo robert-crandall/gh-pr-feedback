@@ -488,59 +488,6 @@ func groupCommentsByFile(comments []model.ReviewComment) fileCommentGroup {
 	return group
 }
 
-func buildApplyInstructions(comments []model.ReviewComment) []applyInstruction {
-	order := make([]string, 0)
-	builders := make(map[string]*strings.Builder)
-
-	for _, comment := range comments {
-		path := strings.TrimSpace(comment.Path)
-		body := strings.TrimSpace(comment.Body)
-		if path == "" || body == "" {
-			continue
-		}
-		if _, ok := builders[path]; !ok {
-			builders[path] = &strings.Builder{}
-			order = append(order, path)
-		}
-		builder := builders[path]
-		if builder.Len() == 0 {
-			fmt.Fprintf(builder, "Apply the following review feedback in %s:%s", path, "\n")
-		}
-
-		lineDesc := describeCommentLocation(comment)
-		if lineDesc != "" {
-			builder.WriteString("\n- ")
-			builder.WriteString(lineDesc)
-		} else {
-			builder.WriteString("\n-")
-		}
-		author := strings.TrimSpace(comment.User.Login)
-		if author != "" {
-			if builder.Len() > 0 {
-				builder.WriteString(" ")
-			}
-			_, _ = fmt.Fprintf(builder, "(@%s)", author)
-		}
-		builder.WriteString(": ")
-		builder.WriteString(body)
-		if comment.HTMLURL != "" {
-			builder.WriteString("\n  Reference: ")
-			builder.WriteString(comment.HTMLURL)
-		}
-	}
-
-	results := make([]applyInstruction, 0, len(order))
-	for _, path := range order {
-		content := strings.TrimSpace(builders[path].String())
-		if content == "" {
-			continue
-		}
-		content = content + "\n\nThis is PR feedback and might not be correct. If the feedback is correct, fix the problem. If it is not correct, provide an answer to the feedback.\n\nEnsure other unrelated code remains unchanged."
-		results = append(results, applyInstruction{Path: path, Instructions: content})
-	}
-	return results
-}
-
 func describeCommentLocation(comment model.ReviewComment) string {
 	if comment.Line != nil {
 		return fmt.Sprintf("Around line %d", *comment.Line)

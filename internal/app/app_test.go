@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/robert-crandall/gh-pr-feedback/internal/model"
 )
 
 func TestPaginateAggregatesPages(t *testing.T) {
@@ -104,42 +102,3 @@ type ioDiscard struct{}
 
 func (ioDiscard) Write(p []byte) (int, error) { return len(p), nil }
 
-func TestBuildApplyInstructions(t *testing.T) {
-	line := 42
-	original := 21
-	comments := []model.ReviewComment{
-		{Path: "foo.go", Body: "Rename variable to match style", Line: &line, User: model.CommentUser{Login: "alice"}, HTMLURL: "https://example.com/1"},
-		{Path: "foo.go", Body: "Cover the new branch with tests", OriginalLine: &original, User: model.CommentUser{Login: "bob"}},
-		{Path: "", Body: "ignore me"},
-	}
-
-	inst := buildApplyInstructions(comments)
-	if len(inst) != 1 {
-		for _, i := range inst {
-			t.Logf("instruction: %+v", i)
-		}
-		t.Fatalf("expected 1 instruction, got %d", len(inst))
-	}
-	if inst[0].Path != "foo.go" {
-		t.Fatalf("expected path foo.go, got %s", inst[0].Path)
-	}
-	text := inst[0].Instructions
-	for _, snippet := range []string{"Rename variable", "Cover the new branch", "Ensure other unrelated code remains unchanged"} {
-		if !strings.Contains(text, snippet) {
-			t.Fatalf("expected instructions to contain %q, got: %s", snippet, text)
-		}
-	}
-	if !strings.Contains(text, "Around line 42") || !strings.Contains(text, "Near original line 21") {
-		t.Fatalf("expected instructions to mention line context, got: %s", text)
-	}
-	if !strings.Contains(text, "@alice") {
-		t.Fatalf("expected instructions to mention reviewer, got: %s", text)
-	}
-}
-
-func TestBuildApplyInstructionsSkipsEmpty(t *testing.T) {
-	inst := buildApplyInstructions([]model.ReviewComment{{Path: "file.go", Body: "", User: model.CommentUser{Login: "alice"}}})
-	if len(inst) != 0 {
-		t.Fatalf("expected no instructions for empty body")
-	}
-}
