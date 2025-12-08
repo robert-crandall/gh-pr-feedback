@@ -6,8 +6,7 @@
 
 A GitHub CLI extension that collects every issue + review comment on the current pull request, renders them as Markdown or JSON, optionally routes feedback to Copilot CLI for summarization, and can even have Copilot **apply fixes** directly to your code.
 
-<!-- Uncomment after recording demo.gif with: vhs demo.tape -->
-<!-- ![Demo](demo.gif) -->
+![Demo](demo.gif)
 
 ## ✨ Features
 

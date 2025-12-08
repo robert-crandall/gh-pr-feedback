@@ -4,8 +4,8 @@
 
 Output demo.gif
 
-Set FontSize 14
-Set Width 1200
+Set FontSize 16
+Set Width 800
 Set Height 600
 Set Theme "Catppuccin Mocha"
 Set Padding 20
@@ -38,7 +38,7 @@ Enter
 Sleep 500ms
 Type "gh pr-feedback --action raw | head -20"
 Enter
-Sleep 3s
+Sleep 5s
 
 # Apply mode teaser
 Ctrl+L
@@ -46,8 +46,14 @@ Type "# Let Copilot CLI address the feedback"
 Enter
 Sleep 500ms
 Type "gh pr-feedback --action apply"
+Sleep 1s
 Enter
-Sleep 4s
+Sleep 3s
+Hide
+Sleep 15s
+Show
+Sleep 3s
+Ctrl+c 
 
 # Wrap up
 Ctrl+L
