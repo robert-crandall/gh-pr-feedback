@@ -1,0 +1,49 @@
+name: Dependabot Auto-Merge
+on: pull_request
+
+permissions:
+  pull-requests: write
+  contents: write
+  checks: read
+  statuses: read
+
+jobs:
+  dependabot:
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    steps:
+      - name: Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: '${{ secrets.GITHUB_TOKEN }}'
+
+      - name: Wait for tests to succeed
+        id: wait-for-tests
+        uses: lewagon/wait-on-check-action@v1.4.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: 'Lint & Format Check'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 20
+          allowed-conclusions: success
+
+      - name: Wait for unit tests to succeed
+        id: wait-for-unit-tests
+        uses: lewagon/wait-on-check-action@v1.4.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: 'Unit & Integration Tests'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 20
+          allowed-conclusions: success
+
+      - name: Enable auto-merge for Dependabot PRs
+        # Only auto-merge minor and patch updates, not major versions
+        if: ${{ (steps.metadata.outputs.update-type == 'version-update:semver-minor' || steps.metadata.outputs.update-type == 'version-update:semver-patch') && steps.wait-for-tests.outcome == 'success' && steps.wait-for-unit-tests.outcome == 'success' }}
+        run: |
+          gh pr merge --auto --squash "$PR_URL"
+          echo "Auto-merge enabled for ${{ steps.metadata.outputs.update-type }} update after successful tests"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
