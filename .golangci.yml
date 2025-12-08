@@ -18,14 +18,6 @@ formatters:
     - gofmt
     - goimports
 
-linters-settings:
-  misspell:
-    locale: US
-  errorlint:
-    errorf: true
-  goimports:
-    local-prefixes: github.com/robert-crandall/gh-pr-feedback
-
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
