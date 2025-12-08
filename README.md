@@ -6,12 +6,12 @@
 
 A GitHub CLI extension that collects every issue + review comment on the current pull request, renders them as Markdown or JSON, optionally routes feedback to Copilot CLI for summarization, and can even have Copilot **apply fixes** directly to your code.
 
-<!-- Uncomment after recording demo.gif with: vhs demo.tape -->
-<!-- ![Demo](demo.gif) -->
+![Demo](demo.gif)
 
 ## ✨ Features
 
 - 📋 **Summarize** – Render all PR feedback as clean Markdown
+- 🎯 **Unresolved Only** – Automatically filters to unresolved review threads (no noise from addressed feedback)
 - 📦 **Export** – Dump raw JSON for scripting and automation
 - 🤖 **Copilot Integration** – Summarize feedback or apply fixes with GitHub Copilot CLI
 - 💬 **Reply** – Post a follow-up comment back to the PR
@@ -39,6 +39,9 @@ Download the appropriate binary from [Releases](https://github.com/robert-cranda
 
 ```bash
 gh extension install .
+
+# To reinstall:
+go build . && gh extension remove gh-pr-feedback && gh extension install .
 ```
 
 ## 🚀 Usage
@@ -69,10 +72,12 @@ gh pr-feedback --action summary --output feedback.md --post-reply "No additional
 | `--action` | `summary` (default), `raw`, `copilot`, or `apply`. |
 | `--output` | Write the rendered output (Markdown or JSON) to a file. |
 | `--post-reply` | Body of a new issue comment to post back to the PR. |
-| `--copilot-cmd` | Command invoked for `copilot` or `apply` actions. Default: `copilot` (summary) or `copilot --allow-all-tools` (apply). |
+| `--copilot-cmd` | Command invoked for `copilot` or `apply` actions. Default: `copilot` (summary) or `copilot --allow-all-tools --allow-all-paths` (apply). |
 | `--quiet` | Suppress log messages. |
 
 ## 🤖 Copilot Integration
+
+> **Note:** Review comments are automatically filtered to **unresolved threads only**. Resolved feedback is excluded so Copilot focuses on what still needs attention.
 
 ### Summarize mode (`--action copilot`)
 

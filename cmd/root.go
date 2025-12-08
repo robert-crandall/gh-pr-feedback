@@ -53,9 +53,9 @@ func init() {
 	rootCmd.Flags().IntVar(&flagPR, "pr", 0, "Override pull request number; auto-detect when omitted")
 	rootCmd.Flags().StringVar(&flagOwner, "owner", "", "Repository owner (required when --pr is set without context)")
 	rootCmd.Flags().StringVar(&flagRepo, "repo", "", "Repository name (required when --pr is set without context)")
-	rootCmd.Flags().StringVar(&flagAction, "action", "summary", "Action to perform: summary, raw, or copilot")
+	rootCmd.Flags().StringVar(&flagAction, "action", "summary", "Action to perform: summary, raw, copilot, or apply")
 	rootCmd.Flags().StringVar(&flagOutput, "output", "", "Write Markdown output to the specified file")
 	rootCmd.Flags().StringVar(&flagPostReply, "post-reply", "", "Post the provided text as a new PR comment after fetching feedback")
-	rootCmd.Flags().StringVar(&flagCopilot, "copilot-cmd", "github-copilot-cli", "Command used when --action copilot is selected")
+	rootCmd.Flags().StringVar(&flagCopilot, "copilot-cmd", "", "Command used when --action is copilot or apply (default: copilot, or copilot --allow-all-tools --allow-all-paths for apply)")
 	rootCmd.Flags().BoolVar(&flagQuiet, "quiet", false, "Suppress non-essential log output")
 }
