@@ -22,10 +22,10 @@ import (
 )
 
 const (
-	actionSummary = "summary"
-	actionRaw     = "raw"
-	actionCopilot = "copilot"
-	actionApply   = "apply"
+	actionMarkdown = "markdown"
+	actionRaw      = "raw"
+	actionSummary  = "summary"
+	actionApply    = "apply"
 
 	pageSize = 100
 )
@@ -118,7 +118,7 @@ func (r *runner) run(ctx context.Context) error {
 		if _, err := fmt.Fprintln(r.opts.Stdout, rendered); err != nil {
 			return err
 		}
-	case actionCopilot:
+	case actionSummary:
 		rendered = render.Markdown(feedback)
 		if err := r.runCopilot(ctx, rendered); err != nil {
 			return err
@@ -150,7 +150,7 @@ func (r *runner) run(ctx context.Context) error {
 
 func (r *runner) normalizeAction() (string, error) {
 	switch r.opts.Action {
-	case actionSummary, actionRaw, actionCopilot, actionApply:
+	case actionMarkdown, actionRaw, actionSummary, actionApply:
 		return r.opts.Action, nil
 	default:
 		return "", fmt.Errorf("invalid --action value %q", r.opts.Action)
@@ -377,7 +377,7 @@ func (r *runner) postReply(ctx context.Context, pr prContext) error {
 		return fmt.Errorf("post reply: %w", err)
 	}
 	if resp.HTMLURL != "" {
-		fmt.Fprintf(r.opts.Stdout, "Posted reply: %s\n", resp.HTMLURL)
+		_, _ = fmt.Fprintf(r.opts.Stdout, "Posted reply: %s\n", resp.HTMLURL)
 	}
 	return nil
 }
@@ -435,7 +435,7 @@ func buildApplyInstructions(comments []model.ReviewComment) []applyInstruction {
 			if builder.Len() > 0 {
 				builder.WriteString(" ")
 			}
-			builder.WriteString(fmt.Sprintf("(@%s)", author))
+			_, _ = fmt.Fprintf(builder, "(@%s)", author)
 		}
 		builder.WriteString(": ")
 		builder.WriteString(body)
@@ -471,7 +471,7 @@ func (r *runner) log(format string, args ...interface{}) {
 	if r.opts.Quiet || r.opts.Stderr == nil {
 		return
 	}
-	fmt.Fprintf(r.opts.Stderr, format+"\n", args...)
+	_, _ = fmt.Fprintf(r.opts.Stderr, format+"\n", args...)
 }
 
 type prContext struct {

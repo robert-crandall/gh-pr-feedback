@@ -54,13 +54,13 @@ gh pr-feedback --action summary
 gh pr-feedback --pr 42 --owner octo-org --repo demo --action raw
 
 # Send feedback through Copilot CLI for summarization
-gh pr-feedback --action copilot
+gh pr-feedback --action summary
 
 # Apply reviewer feedback with Copilot CLI (auto-approves tool usage)
 gh pr-feedback --action apply
 
 # Write Markdown to a file and post a "no action" reply
-gh pr-feedback --action summary --output feedback.md --post-reply "No additional changes required."
+gh pr-feedback --action markdown --output feedback.md --post-reply "No additional changes required."
 ```
 
 ## ⚙️ Flags
@@ -69,22 +69,22 @@ gh pr-feedback --action summary --output feedback.md --post-reply "No additional
 |------|-------------|
 | `--pr` | Override the PR number. When set, provide `--owner` and `--repo` or run inside the target repo. |
 | `--owner`, `--repo` | Repository coordinates used with `--pr`. |
-| `--action` | `summary` (default), `raw`, `copilot`, or `apply`. |
+| `--action` | `markdown` (default), `raw`, `summary`, or `apply`. |
 | `--output` | Write the rendered output (Markdown or JSON) to a file. |
 | `--post-reply` | Body of a new issue comment to post back to the PR. |
-| `--copilot-cmd` | Command invoked for `copilot` or `apply` actions. Default: `copilot` (summary) or `copilot --allow-all-tools --allow-all-paths` (apply). |
+| `--copilot-cmd` | Command invoked for `summary` or `apply` actions. Default: `copilot` (for summarization) or `copilot --allow-all-tools --allow-all-paths` (apply). |
 | `--quiet` | Suppress log messages. |
 
 ## 🤖 Copilot Integration
 
 > **Note:** Review comments are automatically filtered to **unresolved threads only**. Resolved feedback is excluded so Copilot focuses on what still needs attention.
 
-### Summarize mode (`--action copilot`)
+### Summarize mode (`--action summary`)
 
 Pipes all PR feedback to Copilot CLI for AI-powered summarization:
 
 ```bash
-gh pr-feedback --action copilot
+gh pr-feedback --action summary
 ```
 
 ### Apply mode (`--action apply`)

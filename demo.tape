@@ -5,7 +5,7 @@
 Output demo.gif
 
 Set FontSize 16
-Set Width 800
+Set Width 1024
 Set Height 600
 Set Theme "Catppuccin Mocha"
 Set Padding 20
@@ -28,8 +28,13 @@ Type "# Summarize feedback from the current PR"
 Enter
 Sleep 500ms
 Type "gh pr-feedback --action summary"
+Sleep 1s
 Enter
-Sleep 4s
+Sleep 3s
+Hide
+Sleep 15s
+Show
+Sleep 3s
 
 # Raw JSON mode
 Ctrl+L
