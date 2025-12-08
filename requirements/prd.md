@@ -13,7 +13,7 @@ A GitHub CLI extension (`gh-pr-feedback`) that, from your current PR context, fe
    - Flags/env:
      - `--pr` (override PR number; otherwise auto-detect)
      - `--owner`, `--repo` (needed when `--pr` is manual)
-     - `--action` (`markdown` | `raw` | `copilot`) — default `markdown`
+     - `--action` (`markdown` | `raw` | `summary`) — default `markdown`
      - `--output` (write Markdown to file)
      - `--post-reply` (string to post back to PR)
      - `--copilot-cmd` (default `copilot`)
@@ -38,7 +38,7 @@ A GitHub CLI extension (`gh-pr-feedback`) that, from your current PR context, fe
 6) **Action modes**
    - `markdown`: Markdown to stdout (and to `--output` if set).
    - `raw`: JSON to stdout.
-   - `copilot`: Markdown piped to Copilot CLI with a prompt like:
+   - `summary`: Markdown piped to Copilot CLI with a prompt like:
      - “You are a code assistant. Summarize feedback and propose concrete code changes. If no changes are needed, explain why.”
    - Configurable `--copilot-cmd` to support `copilot`, or `gh copilot`.
 
@@ -60,5 +60,5 @@ A GitHub CLI extension (`gh-pr-feedback`) that, from your current PR context, fe
     - `gh extension publish`
     - README with usage examples:
       - `gh pr-feedback --action markdown > feedback.md`
-      - `gh pr-feedback --action copilot --copilot-cmd copilot`
+      - `gh pr-feedback --action summary --copilot-cmd copilot`
       - `gh pr-feedback --post-reply "No changes needed because ..."`

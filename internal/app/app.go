@@ -24,8 +24,8 @@ import (
 const (
 	actionMarkdown = "markdown"
 	actionRaw      = "raw"
-	actionCopilot = "copilot"
-	actionApply   = "apply"
+	actionSummary  = "summary"
+	actionApply    = "apply"
 
 	pageSize = 100
 )
@@ -118,7 +118,7 @@ func (r *runner) run(ctx context.Context) error {
 		if _, err := fmt.Fprintln(r.opts.Stdout, rendered); err != nil {
 			return err
 		}
-	case actionCopilot:
+	case actionSummary:
 		rendered = render.Markdown(feedback)
 		if err := r.runCopilot(ctx, rendered); err != nil {
 			return err
@@ -150,7 +150,7 @@ func (r *runner) run(ctx context.Context) error {
 
 func (r *runner) normalizeAction() (string, error) {
 	switch r.opts.Action {
-	case actionSummary, actionRaw, actionCopilot, actionApply:
+	case actionMarkdown, actionRaw, actionSummary, actionApply:
 		return r.opts.Action, nil
 	default:
 		return "", fmt.Errorf("invalid --action value %q", r.opts.Action)
