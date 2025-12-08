@@ -333,9 +333,8 @@ type applyInstruction struct {
 }
 
 func (r *runner) runCopilotApply(ctx context.Context, feedback model.Feedback) error {
-	instructions := buildApplyInstructions(feedback.ReviewComments)
-	if len(instructions) == 0 {
-		return errors.New("no review comments with actionable content")
+	if len(feedback.ReviewComments) == 0 {
+		return errors.New("no review comments to apply")
 	}
 
 	args, err := shlex.Split(strings.TrimSpace(r.opts.CopilotCmd))
@@ -346,18 +345,18 @@ func (r *runner) runCopilotApply(ctx context.Context, feedback model.Feedback) e
 		return errors.New("--copilot-cmd is empty")
 	}
 
-	baseArgs := append([]string{}, args...)
-
-	for _, inst := range instructions {
-		cmdArgs := append([]string{}, baseArgs...)
-		cmdArgs = append(cmdArgs, "-p", inst.Instructions)
-		cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
-		cmd.Stdout = r.opts.Stdout
-		cmd.Stderr = r.opts.Stderr
-		r.log("Applying feedback to %s via %s", inst.Path, filepath.Base(cmdArgs[0]))
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("copilot apply for %s: %w", inst.Path, err)
-		}
+	// Build comprehensive prompt with pattern analysis
+	prompt := buildApplyPromptWithAnalysis(feedback.ReviewComments)
+	
+	// Single invocation with all context
+	cmdArgs := append([]string{}, args...)
+	cmdArgs = append(cmdArgs, "-p", prompt)
+	cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)
+	cmd.Stdout = r.opts.Stdout
+	cmd.Stderr = r.opts.Stderr
+	r.log("Applying feedback with pattern analysis via %s", filepath.Base(cmdArgs[0]))
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("copilot apply: %w", err)
 	}
 
 	return nil
@@ -402,6 +401,91 @@ func buildCopilotPrompt(markdown string) string {
 	b.WriteString("# Feedback\n\n")
 	b.WriteString(markdown)
 	return b.String()
+}
+
+func buildApplyPromptWithAnalysis(comments []model.ReviewComment) string {
+	if len(comments) == 0 {
+		return ""
+	}
+
+	var b strings.Builder
+	
+	// Header with instructions for pattern analysis
+	b.WriteString("You are helping resolve PR review feedback. Multiple reviewers have left comments across multiple files.\n\n")
+	b.WriteString("IMPORTANT INSTRUCTIONS:\n")
+	b.WriteString("1. First, analyze the feedback to identify common patterns or repeated issues across files\n")
+	b.WriteString("2. When you see comments like 'Same', 'Ditto', 'Same issue here', etc., understand them in context of previous comments\n")
+	b.WriteString("3. Apply fixes consistently when the same pattern appears in multiple files\n")
+	b.WriteString("4. If feedback appears incorrect or unclear, explain why rather than making incorrect changes\n")
+	b.WriteString("5. Keep unrelated code unchanged\n\n")
+	
+	b.WriteString("---\n\n")
+	b.WriteString("# Review Feedback by File\n\n")
+	
+	// Group comments by file to show structure
+	fileGroups := groupCommentsByFile(comments)
+	
+	for _, path := range fileGroups.order {
+		fileComments := fileGroups.byFile[path]
+		b.WriteString(fmt.Sprintf("## File: %s\n\n", path))
+		
+		for _, comment := range fileComments {
+			lineDesc := describeCommentLocation(comment)
+			if lineDesc != "" {
+				b.WriteString(fmt.Sprintf("**%s** ", lineDesc))
+			}
+			
+			author := strings.TrimSpace(comment.User.Login)
+			if author != "" {
+				b.WriteString(fmt.Sprintf("(@%s)", author))
+			}
+			b.WriteString(":\n")
+			
+			body := strings.TrimSpace(comment.Body)
+			if body != "" {
+				b.WriteString(fmt.Sprintf("> %s\n\n", body))
+			}
+			
+			if comment.HTMLURL != "" {
+				b.WriteString(fmt.Sprintf("Reference: %s\n\n", comment.HTMLURL))
+			}
+		}
+		
+		b.WriteString("---\n\n")
+	}
+	
+	b.WriteString("\nNow analyze the patterns and apply the necessary fixes across all files. ")
+	b.WriteString("Remember to resolve cross-references like 'Same' by understanding the context from previous comments.")
+	
+	return b.String()
+}
+
+type fileCommentGroup struct {
+	order  []string
+	byFile map[string][]model.ReviewComment
+}
+
+func groupCommentsByFile(comments []model.ReviewComment) fileCommentGroup {
+	group := fileCommentGroup{
+		order:  make([]string, 0),
+		byFile: make(map[string][]model.ReviewComment),
+	}
+	
+	for _, comment := range comments {
+		path := strings.TrimSpace(comment.Path)
+		if path == "" {
+			path = "(no file specified)"
+		}
+		
+		if _, exists := group.byFile[path]; !exists {
+			group.order = append(group.order, path)
+			group.byFile[path] = make([]model.ReviewComment, 0)
+		}
+		
+		group.byFile[path] = append(group.byFile[path], comment)
+	}
+	
+	return group
 }
 
 func buildApplyInstructions(comments []model.ReviewComment) []applyInstruction {
