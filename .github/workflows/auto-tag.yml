@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  tag:
+  tag-and-release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -26,9 +26,18 @@ jobs:
           # Example: "feat: new feature #minor"
           # Example: "BREAKING CHANGE: api change #major"
 
-      - name: Create release notes
+      - name: Set up Go
         if: steps.tag_version.outputs.new_tag
-        run: |
-          echo "New tag created: ${{ steps.tag_version.outputs.new_tag }}"
-          echo "Previous tag: ${{ steps.tag_version.outputs.previous_tag }}"
-          echo "Changelog: ${{ steps.tag_version.outputs.changelog }}"
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Run GoReleaser
+        if: steps.tag_version.outputs.new_tag
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
