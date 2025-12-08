@@ -26,6 +26,12 @@ jobs:
           # Example: "feat: new feature #minor"
           # Example: "BREAKING CHANGE: api change #major"
 
+      - name: Fetch newly created tag
+        if: steps.tag_version.outputs.new_tag
+        run: |
+          git fetch --tags --force
+          git checkout ${{ steps.tag_version.outputs.new_tag }}
+
       - name: Set up Go
         if: steps.tag_version.outputs.new_tag
         uses: actions/setup-go@v6
