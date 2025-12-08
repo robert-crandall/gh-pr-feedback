@@ -95,6 +95,8 @@ Has Copilot evaluate each piece of review feedback and either apply fixes or exp
 gh pr-feedback --action apply
 ```
 
+See [apply.md](apply.md) for an in-depth overview of how `apply` works.
+
 > 💡 **Tip:** The apply mode uses `copilot --allow-all-tools` by default to auto-approve file edits. Override with `--copilot-cmd` if you want manual confirmation.
 
 ## 🛠️ Development
