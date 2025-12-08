@@ -104,42 +104,156 @@ type ioDiscard struct{}
 
 func (ioDiscard) Write(p []byte) (int, error) { return len(p), nil }
 
-func TestBuildApplyInstructions(t *testing.T) {
-	line := 42
-	original := 21
-	comments := []model.ReviewComment{
-		{Path: "foo.go", Body: "Rename variable to match style", Line: &line, User: model.CommentUser{Login: "alice"}, HTMLURL: "https://example.com/1"},
-		{Path: "foo.go", Body: "Cover the new branch with tests", OriginalLine: &original, User: model.CommentUser{Login: "bob"}},
-		{Path: "", Body: "ignore me"},
+func TestGroupCommentsByFile(t *testing.T) {
+	tests := []struct {
+		name     string
+		comments []model.ReviewComment
+		want     map[string]int // path -> count
+		wantPath []string       // expected order
+	}{
+		{
+			name: "groups by file path",
+			comments: []model.ReviewComment{
+				{Path: "file1.go", Body: "comment 1"},
+				{Path: "file2.go", Body: "comment 2"},
+				{Path: "file1.go", Body: "comment 3"},
+			},
+			want:     map[string]int{"file1.go": 2, "file2.go": 1},
+			wantPath: []string{"file1.go", "file2.go"},
+		},
+		{
+			name: "handles empty path as general comment",
+			comments: []model.ReviewComment{
+				{Path: "", Body: "general comment"},
+				{Path: "file1.go", Body: "file comment"},
+			},
+			want:     map[string]int{"(general comment)": 1, "file1.go": 1},
+			wantPath: []string{"(general comment)", "file1.go"},
+		},
+		{
+			name: "filters out empty body comments",
+			comments: []model.ReviewComment{
+				{Path: "file1.go", Body: ""},
+				{Path: "file1.go", Body: "  "},
+				{Path: "file1.go", Body: "valid comment"},
+			},
+			want:     map[string]int{"file1.go": 1},
+			wantPath: []string{"file1.go"},
+		},
+		{
+			name: "trims whitespace from paths",
+			comments: []model.ReviewComment{
+				{Path: "  file1.go  ", Body: "comment"},
+			},
+			want:     map[string]int{"file1.go": 1},
+			wantPath: []string{"file1.go"},
+		},
 	}
 
-	inst := buildApplyInstructions(comments)
-	if len(inst) != 1 {
-		for _, i := range inst {
-			t.Logf("instruction: %+v", i)
-		}
-		t.Fatalf("expected 1 instruction, got %d", len(inst))
-	}
-	if inst[0].Path != "foo.go" {
-		t.Fatalf("expected path foo.go, got %s", inst[0].Path)
-	}
-	text := inst[0].Instructions
-	for _, snippet := range []string{"Rename variable", "Cover the new branch", "Ensure other unrelated code remains unchanged"} {
-		if !strings.Contains(text, snippet) {
-			t.Fatalf("expected instructions to contain %q, got: %s", snippet, text)
-		}
-	}
-	if !strings.Contains(text, "Around line 42") || !strings.Contains(text, "Near original line 21") {
-		t.Fatalf("expected instructions to mention line context, got: %s", text)
-	}
-	if !strings.Contains(text, "@alice") {
-		t.Fatalf("expected instructions to mention reviewer, got: %s", text)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := groupCommentsByFile(tt.comments)
+
+			if len(got.byFile) != len(tt.want) {
+				t.Errorf("got %d groups, want %d", len(got.byFile), len(tt.want))
+			}
+
+			for path, wantCount := range tt.want {
+				gotComments, exists := got.byFile[path]
+				if !exists {
+					t.Errorf("missing path %q", path)
+					continue
+				}
+				if len(gotComments) != wantCount {
+					t.Errorf("path %q: got %d comments, want %d", path, len(gotComments), wantCount)
+				}
+			}
+
+			if len(got.order) != len(tt.wantPath) {
+				t.Errorf("got order length %d, want %d", len(got.order), len(tt.wantPath))
+			}
+			for i, path := range tt.wantPath {
+				if i >= len(got.order) || got.order[i] != path {
+					t.Errorf("order[%d]: got %q, want %q", i, got.order[i], path)
+				}
+			}
+		})
 	}
 }
 
-func TestBuildApplyInstructionsSkipsEmpty(t *testing.T) {
-	inst := buildApplyInstructions([]model.ReviewComment{{Path: "file.go", Body: "", User: model.CommentUser{Login: "alice"}}})
-	if len(inst) != 0 {
-		t.Fatalf("expected no instructions for empty body")
+func TestBuildApplyPromptWithAnalysis(t *testing.T) {
+	tests := []struct {
+		name         string
+		comments     []model.ReviewComment
+		wantContains []string
+		wantNotEmpty bool
+	}{
+		{
+			name: "includes instructions and file headers",
+			comments: []model.ReviewComment{
+				{Path: "file1.go", Body: "fix this", User: model.CommentUser{Login: "reviewer1"}},
+			},
+			wantContains: []string{
+				"IMPORTANT INSTRUCTIONS:",
+				"analyze the feedback",
+				"## File: file1.go",
+				"> fix this",
+				"(@reviewer1)",
+			},
+			wantNotEmpty: true,
+		},
+		{
+			name: "handles comments with line numbers",
+			comments: []model.ReviewComment{
+				{Path: "file1.go", Body: "fix", Line: intPtr(42)},
+			},
+			wantContains: []string{
+				"Around line 42",
+				"> fix",
+			},
+			wantNotEmpty: true,
+		},
+		{
+			name: "includes reference URLs",
+			comments: []model.ReviewComment{
+				{Path: "file1.go", Body: "comment", HTMLURL: "https://github.com/owner/repo/pull/1#discussion_123"},
+			},
+			wantContains: []string{
+				"Reference: https://github.com/owner/repo/pull/1#discussion_123",
+			},
+			wantNotEmpty: true,
+		},
+		{
+			name: "filters empty body comments",
+			comments: []model.ReviewComment{
+				{Path: "file1.go", Body: ""},
+				{Path: "file2.go", Body: "valid"},
+			},
+			wantContains: []string{
+				"## File: file2.go",
+				"> valid",
+			},
+			wantNotEmpty: true,
+		},
 	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildApplyPromptWithAnalysis(tt.comments)
+
+			if tt.wantNotEmpty && got == "" {
+				t.Error("expected non-empty prompt")
+			}
+
+			for _, want := range tt.wantContains {
+				if !strings.Contains(got, want) {
+					t.Errorf("prompt missing expected content %q", want)
+				}
+			}
+		})
+	}
+}
+
+func intPtr(i int) *int {
+	return &i
 }
