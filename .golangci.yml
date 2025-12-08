@@ -1,4 +1,4 @@
-version: 2
+version: "2"
 
 linters:
   enable:
@@ -18,18 +18,7 @@ formatters:
     - gofmt
     - goimports
 
-formatters-settings:
-  goimports:
-    local-prefixes: github.com/robert-crandall/gh-pr-feedback
-
-linters-settings:
-  misspell:
-    locale: US
-  errorlint:
-    errorf: true
-
 issues:
-  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
 
