@@ -467,9 +467,14 @@ func groupCommentsByFile(comments []model.ReviewComment) fileCommentGroup {
 	}
 
 	for _, comment := range comments {
+		// Skip comments with empty bodies
+		if strings.TrimSpace(comment.Body) == "" {
+			continue
+		}
+
 		path := strings.TrimSpace(comment.Path)
 		if path == "" {
-			path = "(no file specified)"
+			path = "(general comment)"
 		}
 
 		if _, exists := group.byFile[path]; !exists {
