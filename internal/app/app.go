@@ -377,7 +377,7 @@ func (r *runner) postReply(ctx context.Context, pr prContext) error {
 		return fmt.Errorf("post reply: %w", err)
 	}
 	if resp.HTMLURL != "" {
-		fmt.Fprintf(r.opts.Stdout, "Posted reply: %s\n", resp.HTMLURL)
+		_, _ = fmt.Fprintf(r.opts.Stdout, "Posted reply: %s\n", resp.HTMLURL)
 	}
 	return nil
 }
@@ -435,7 +435,7 @@ func buildApplyInstructions(comments []model.ReviewComment) []applyInstruction {
 			if builder.Len() > 0 {
 				builder.WriteString(" ")
 			}
-			builder.WriteString(fmt.Sprintf("(@%s)", author))
+			fmt.Fprintf(builder, "(@%s)", author)
 		}
 		builder.WriteString(": ")
 		builder.WriteString(body)
@@ -471,7 +471,7 @@ func (r *runner) log(format string, args ...interface{}) {
 	if r.opts.Quiet || r.opts.Stderr == nil {
 		return
 	}
-	fmt.Fprintf(r.opts.Stderr, format+"\n", args...)
+	_, _ = fmt.Fprintf(r.opts.Stderr, format+"\n", args...)
 }
 
 type prContext struct {
