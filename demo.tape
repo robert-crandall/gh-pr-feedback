@@ -22,12 +22,12 @@ Type "gh pr-feedback --help"
 Enter
 Sleep 3s
 
-# Summary mode demo
+# Markdown mode demo
 Ctrl+L
 Type "# Summarize feedback from the current PR"
 Enter
 Sleep 500ms
-Type "gh pr-feedback --action summary"
+Type "gh pr-feedback --action markdown"
 Enter
 Sleep 4s
 

@@ -60,7 +60,7 @@ gh pr-feedback --action copilot
 gh pr-feedback --action apply
 
 # Write Markdown to a file and post a "no action" reply
-gh pr-feedback --action summary --output feedback.md --post-reply "No additional changes required."
+gh pr-feedback --action markdown --output feedback.md --post-reply "No additional changes required."
 ```
 
 ## ⚙️ Flags
@@ -69,10 +69,10 @@ gh pr-feedback --action summary --output feedback.md --post-reply "No additional
 |------|-------------|
 | `--pr` | Override the PR number. When set, provide `--owner` and `--repo` or run inside the target repo. |
 | `--owner`, `--repo` | Repository coordinates used with `--pr`. |
-| `--action` | `summary` (default), `raw`, `copilot`, or `apply`. |
+| `--action` | `markdown` (default), `raw`, `copilot`, or `apply`. |
 | `--output` | Write the rendered output (Markdown or JSON) to a file. |
 | `--post-reply` | Body of a new issue comment to post back to the PR. |
-| `--copilot-cmd` | Command invoked for `copilot` or `apply` actions. Default: `copilot` (summary) or `copilot --allow-all-tools --allow-all-paths` (apply). |
+| `--copilot-cmd` | Command invoked for `copilot` or `apply` actions. Default: `copilot` (for summarization) or `copilot --allow-all-tools --allow-all-paths` (apply). |
 | `--quiet` | Suppress log messages. |
 
 ## 🤖 Copilot Integration

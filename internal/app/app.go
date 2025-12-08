@@ -22,8 +22,8 @@ import (
 )
 
 const (
-	actionSummary = "summary"
-	actionRaw     = "raw"
+	actionMarkdown = "markdown"
+	actionRaw      = "raw"
 	actionCopilot = "copilot"
 	actionApply   = "apply"
 
