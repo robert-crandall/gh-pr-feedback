@@ -22,14 +22,19 @@ Type "gh pr-feedback --help"
 Enter
 Sleep 3s
 
-# Markdown mode demo
+# Summary mode demo
 Ctrl+L
 Type "# Summarize feedback from the current PR"
 Enter
 Sleep 500ms
-Type "gh pr-feedback --action markdown"
+Type "gh pr-feedback --action summary"
+Sleep 1s
 Enter
-Sleep 4s
+Sleep 3s
+Hide
+Sleep 15s
+Show
+Sleep 3s
 
 # Raw JSON mode
 Ctrl+L

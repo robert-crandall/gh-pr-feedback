@@ -435,7 +435,7 @@ func buildApplyInstructions(comments []model.ReviewComment) []applyInstruction {
 			if builder.Len() > 0 {
 				builder.WriteString(" ")
 			}
-			fmt.Fprintf(builder, "(@%s)", author)
+			_, _ = fmt.Fprintf(builder, "(@%s)", author)
 		}
 		builder.WriteString(": ")
 		builder.WriteString(body)
