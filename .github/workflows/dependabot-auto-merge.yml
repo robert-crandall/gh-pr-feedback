@@ -20,7 +20,7 @@ jobs:
 
       - name: Wait for tests to succeed
         id: wait-for-tests
-        uses: lewagon/wait-on-check-action@v1.4.1
+        uses: lewagon/wait-on-check-action@v1.6.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           check-name: 'Lint & Format Check'
@@ -30,7 +30,7 @@ jobs:
 
       - name: Wait for unit tests to succeed
         id: wait-for-unit-tests
-        uses: lewagon/wait-on-check-action@v1.4.1
+        uses: lewagon/wait-on-check-action@v1.6.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           check-name: 'Unit & Integration Tests'
