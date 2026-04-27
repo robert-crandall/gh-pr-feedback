@@ -55,13 +55,14 @@ func Run(ctx context.Context, opts Options) error {
 		opts.Stderr = os.Stderr
 	}
 	opts.Action = strings.ToLower(strings.TrimSpace(opts.Action))
-	if opts.Action == "" {
-		opts.Action = actionSummary
-	}
 
-	// --watch defaults to the apply action
-	if opts.Watch && opts.Action == "" {
-		opts.Action = actionApply
+	// --watch defaults to the apply action when no action was provided.
+	if opts.Action == "" {
+		if opts.Watch {
+			opts.Action = actionApply
+		} else {
+			opts.Action = actionSummary
+		}
 	}
 
 	if opts.CopilotCmd == "" {
@@ -70,9 +71,6 @@ func Run(ctx context.Context, opts Options) error {
 		} else {
 			opts.CopilotCmd = "copilot"
 		}
-	}
-	if opts.Model != "" {
-		opts.CopilotCmd = opts.CopilotCmd + " --model " + opts.Model
 	}
 
 	r := &runner{opts: opts}
@@ -87,7 +85,7 @@ type runner struct {
 
 const (
 	watchInterval = time.Minute
-	watchMaxTries  = 10
+	watchMaxTries = 10
 )
 
 func (r *runner) run(ctx context.Context) error {
@@ -373,6 +371,10 @@ func (r *runner) runCopilot(ctx context.Context, markdown string) error {
 		return errors.New("--copilot-cmd is empty")
 	}
 
+	if r.opts.Model != "" {
+		args = append(args, "--model", r.opts.Model)
+	}
+
 	prompt := buildCopilotPrompt(markdown)
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Stdin = strings.NewReader(prompt)
@@ -393,6 +395,10 @@ func (r *runner) runCopilotApply(ctx context.Context, feedback model.Feedback) e
 	}
 	if len(args) == 0 {
 		return errors.New("--copilot-cmd is empty")
+	}
+
+	if r.opts.Model != "" {
+		args = append(args, "--model", r.opts.Model)
 	}
 
 	// Build comprehensive prompt with pattern analysis

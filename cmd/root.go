@@ -63,5 +63,5 @@ func init() {
 	rootCmd.Flags().StringVar(&flagCopilot, "copilot-cmd", "", "Command used when --action is summary or apply (default: copilot, or copilot --allow-all-tools --allow-all-paths for apply)")
 	rootCmd.Flags().StringVar(&flagModel, "model", "", "Model to pass to the copilot command via --model (e.g. claude-sonnet-4.5)")
 	rootCmd.Flags().BoolVar(&flagQuiet, "quiet", false, "Suppress non-essential log output")
-	rootCmd.Flags().BoolVar(&flagWatch, "watch", false, "Poll for feedback every minute, up to 10 minutes, and apply when found")
+	rootCmd.Flags().BoolVar(&flagWatch, "watch", false, "Poll for feedback every minute, up to 10 minutes, and run the configured action when found (defaults to apply)")
 }
