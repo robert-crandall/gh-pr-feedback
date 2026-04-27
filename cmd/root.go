@@ -18,6 +18,7 @@ var (
 	flagPostReply string
 	flagCopilot   string
 	flagQuiet     bool
+	flagWatch     bool
 )
 
 var rootCmd = &cobra.Command{
@@ -34,6 +35,7 @@ var rootCmd = &cobra.Command{
 			PostReply:  flagPostReply,
 			CopilotCmd: flagCopilot,
 			Quiet:      flagQuiet,
+			Watch:      flagWatch,
 			Stdout:     os.Stdout,
 			Stderr:     os.Stderr,
 		}
@@ -58,4 +60,5 @@ func init() {
 	rootCmd.Flags().StringVar(&flagPostReply, "post-reply", "", "Post the provided text as a new PR comment after fetching feedback")
 	rootCmd.Flags().StringVar(&flagCopilot, "copilot-cmd", "", "Command used when --action is summary or apply (default: copilot, or copilot --allow-all-tools --allow-all-paths for apply)")
 	rootCmd.Flags().BoolVar(&flagQuiet, "quiet", false, "Suppress non-essential log output")
+	rootCmd.Flags().BoolVar(&flagWatch, "watch", false, "Poll for feedback every minute, up to 10 minutes, and apply when found")
 }

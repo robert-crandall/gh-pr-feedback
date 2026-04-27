@@ -40,6 +40,7 @@ type Options struct {
 	PostReply  string
 	CopilotCmd string
 	Quiet      bool
+	Watch      bool
 	Stdout     io.Writer
 	Stderr     io.Writer
 }
@@ -55,6 +56,11 @@ func Run(ctx context.Context, opts Options) error {
 	opts.Action = strings.ToLower(strings.TrimSpace(opts.Action))
 	if opts.Action == "" {
 		opts.Action = actionSummary
+	}
+
+	// --watch defaults to the apply action
+	if opts.Watch && opts.Action == "" {
+		opts.Action = actionApply
 	}
 
 	if opts.CopilotCmd == "" {
@@ -74,6 +80,11 @@ type runner struct {
 	restClient    *api.RESTClient
 	graphqlClient *api.GraphQLClient
 }
+
+const (
+	watchInterval = time.Minute
+	watchMaxTries  = 10
+)
 
 func (r *runner) run(ctx context.Context) error {
 	var err error
@@ -98,16 +109,56 @@ func (r *runner) run(ctx context.Context) error {
 	}
 	r.log("Resolved PR context: %s/%s#%d", prCtx.Owner, prCtx.Repo, prCtx.Number)
 
+	if r.opts.Watch {
+		return r.runWatch(ctx, prCtx)
+	}
+
 	feedback, err := r.fetchFeedback(ctx, prCtx)
 	if err != nil {
 		return err
 	}
 
+	return r.runAction(ctx, prCtx, feedback)
+}
+
+func (r *runner) runWatch(ctx context.Context, prCtx prContext) error {
+	for attempt := 1; attempt <= watchMaxTries; attempt++ {
+		r.log("Watch attempt %d/%d: checking for feedback...", attempt, watchMaxTries)
+
+		feedback, err := r.fetchFeedback(ctx, prCtx)
+		if err != nil {
+			return err
+		}
+
+		hasFeedback := len(feedback.IssueComments) > 0 || len(feedback.ReviewComments) > 0
+		if hasFeedback {
+			r.log("Feedback found, running action %q", r.opts.Action)
+			return r.runAction(ctx, prCtx, feedback)
+		}
+
+		r.log("No feedback yet.")
+		if attempt == watchMaxTries {
+			break
+		}
+
+		r.log("Waiting %s before next check...", watchInterval)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(watchInterval):
+		}
+	}
+
+	return fmt.Errorf("no feedback found after %d attempts", watchMaxTries)
+}
+
+func (r *runner) runAction(ctx context.Context, prCtx prContext, feedback model.Feedback) error {
 	var rendered string
-	switch action {
+	var err error
+	switch r.opts.Action {
 	case actionMarkdown:
 		rendered = render.Markdown(feedback)
-		if _, err := fmt.Fprint(r.opts.Stdout, rendered); err != nil {
+		if _, err = fmt.Fprint(r.opts.Stdout, rendered); err != nil {
 			return err
 		}
 	case actionRaw:
@@ -115,32 +166,32 @@ func (r *runner) run(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintln(r.opts.Stdout, rendered); err != nil {
+		if _, err = fmt.Fprintln(r.opts.Stdout, rendered); err != nil {
 			return err
 		}
 	case actionSummary:
 		rendered = render.Markdown(feedback)
-		if err := r.runCopilot(ctx, rendered); err != nil {
+		if err = r.runCopilot(ctx, rendered); err != nil {
 			return err
 		}
 	case actionApply:
 		rendered = render.Markdown(feedback)
-		if err := r.runCopilotApply(ctx, feedback); err != nil {
+		if err = r.runCopilotApply(ctx, feedback); err != nil {
 			return err
 		}
 	default:
-		return fmt.Errorf("unsupported action %q", action)
+		return fmt.Errorf("unsupported action %q", r.opts.Action)
 	}
 
 	if r.opts.OutputPath != "" {
-		if err := writeOutputFile(r.opts.OutputPath, rendered); err != nil {
+		if err = writeOutputFile(r.opts.OutputPath, rendered); err != nil {
 			return err
 		}
 		r.log("Wrote output to %s", r.opts.OutputPath)
 	}
 
 	if strings.TrimSpace(r.opts.PostReply) != "" {
-		if err := r.postReply(ctx, prCtx); err != nil {
+		if err = r.postReply(ctx, prCtx); err != nil {
 			return err
 		}
 	}
