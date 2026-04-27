@@ -483,27 +483,27 @@ func buildApplyPromptWithAnalysis(comments []model.ReviewComment) string {
 
 	for _, path := range fileGroups.order {
 		fileComments := fileGroups.byFile[path]
-		b.WriteString(fmt.Sprintf("## File: %s\n\n", path))
+		fmt.Fprintf(&b, "## File: %s\n\n", path)
 
 		for _, comment := range fileComments {
 			lineDesc := describeCommentLocation(comment)
 			if lineDesc != "" {
-				b.WriteString(fmt.Sprintf("**%s** ", lineDesc))
+				fmt.Fprintf(&b, "**%s** ", lineDesc)
 			}
 
 			author := strings.TrimSpace(comment.User.Login)
 			if author != "" {
-				b.WriteString(fmt.Sprintf("(@%s)", author))
+				fmt.Fprintf(&b, "(@%s)", author)
 			}
 			b.WriteString(":\n")
 
 			body := strings.TrimSpace(comment.Body)
 			if body != "" {
-				b.WriteString(fmt.Sprintf("> %s\n\n", body))
+				fmt.Fprintf(&b, "> %s\n\n", body)
 			}
 
 			if comment.HTMLURL != "" {
-				b.WriteString(fmt.Sprintf("Reference: %s\n\n", comment.HTMLURL))
+				fmt.Fprintf(&b, "Reference: %s\n\n", comment.HTMLURL)
 			}
 		}
 
