@@ -39,6 +39,7 @@ type Options struct {
 	OutputPath string
 	PostReply  string
 	CopilotCmd string
+	Model      string
 	Quiet      bool
 	Watch      bool
 	Stdout     io.Writer
@@ -69,6 +70,9 @@ func Run(ctx context.Context, opts Options) error {
 		} else {
 			opts.CopilotCmd = "copilot"
 		}
+	}
+	if opts.Model != "" {
+		opts.CopilotCmd = opts.CopilotCmd + " --model " + opts.Model
 	}
 
 	r := &runner{opts: opts}
