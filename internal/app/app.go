@@ -39,7 +39,9 @@ type Options struct {
 	OutputPath string
 	PostReply  string
 	CopilotCmd string
+	Model      string
 	Quiet      bool
+	Watch      bool
 	Stdout     io.Writer
 	Stderr     io.Writer
 }
@@ -53,8 +55,14 @@ func Run(ctx context.Context, opts Options) error {
 		opts.Stderr = os.Stderr
 	}
 	opts.Action = strings.ToLower(strings.TrimSpace(opts.Action))
+
+	// --watch defaults to the apply action when no action was provided.
 	if opts.Action == "" {
-		opts.Action = actionSummary
+		if opts.Watch {
+			opts.Action = actionApply
+		} else {
+			opts.Action = actionSummary
+		}
 	}
 
 	if opts.CopilotCmd == "" {
@@ -74,6 +82,11 @@ type runner struct {
 	restClient    *api.RESTClient
 	graphqlClient *api.GraphQLClient
 }
+
+const (
+	watchInterval = time.Minute
+	watchMaxTries = 10
+)
 
 func (r *runner) run(ctx context.Context) error {
 	var err error
@@ -98,16 +111,56 @@ func (r *runner) run(ctx context.Context) error {
 	}
 	r.log("Resolved PR context: %s/%s#%d", prCtx.Owner, prCtx.Repo, prCtx.Number)
 
+	if r.opts.Watch {
+		return r.runWatch(ctx, prCtx)
+	}
+
 	feedback, err := r.fetchFeedback(ctx, prCtx)
 	if err != nil {
 		return err
 	}
 
+	return r.runAction(ctx, prCtx, feedback)
+}
+
+func (r *runner) runWatch(ctx context.Context, prCtx prContext) error {
+	for attempt := 1; attempt <= watchMaxTries; attempt++ {
+		r.log("Watch attempt %d/%d: checking for feedback...", attempt, watchMaxTries)
+
+		feedback, err := r.fetchFeedback(ctx, prCtx)
+		if err != nil {
+			return err
+		}
+
+		hasFeedback := len(feedback.IssueComments) > 0 || len(feedback.ReviewComments) > 0
+		if hasFeedback {
+			r.log("Feedback found, running action %q", r.opts.Action)
+			return r.runAction(ctx, prCtx, feedback)
+		}
+
+		r.log("No feedback yet.")
+		if attempt == watchMaxTries {
+			break
+		}
+
+		r.log("Waiting %s before next check...", watchInterval)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(watchInterval):
+		}
+	}
+
+	return fmt.Errorf("no feedback found after %d attempts", watchMaxTries)
+}
+
+func (r *runner) runAction(ctx context.Context, prCtx prContext, feedback model.Feedback) error {
 	var rendered string
-	switch action {
+	var err error
+	switch r.opts.Action {
 	case actionMarkdown:
 		rendered = render.Markdown(feedback)
-		if _, err := fmt.Fprint(r.opts.Stdout, rendered); err != nil {
+		if _, err = fmt.Fprint(r.opts.Stdout, rendered); err != nil {
 			return err
 		}
 	case actionRaw:
@@ -115,32 +168,32 @@ func (r *runner) run(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintln(r.opts.Stdout, rendered); err != nil {
+		if _, err = fmt.Fprintln(r.opts.Stdout, rendered); err != nil {
 			return err
 		}
 	case actionSummary:
 		rendered = render.Markdown(feedback)
-		if err := r.runCopilot(ctx, rendered); err != nil {
+		if err = r.runCopilot(ctx, rendered); err != nil {
 			return err
 		}
 	case actionApply:
 		rendered = render.Markdown(feedback)
-		if err := r.runCopilotApply(ctx, feedback); err != nil {
+		if err = r.runCopilotApply(ctx, feedback); err != nil {
 			return err
 		}
 	default:
-		return fmt.Errorf("unsupported action %q", action)
+		return fmt.Errorf("unsupported action %q", r.opts.Action)
 	}
 
 	if r.opts.OutputPath != "" {
-		if err := writeOutputFile(r.opts.OutputPath, rendered); err != nil {
+		if err = writeOutputFile(r.opts.OutputPath, rendered); err != nil {
 			return err
 		}
 		r.log("Wrote output to %s", r.opts.OutputPath)
 	}
 
 	if strings.TrimSpace(r.opts.PostReply) != "" {
-		if err := r.postReply(ctx, prCtx); err != nil {
+		if err = r.postReply(ctx, prCtx); err != nil {
 			return err
 		}
 	}
@@ -318,6 +371,10 @@ func (r *runner) runCopilot(ctx context.Context, markdown string) error {
 		return errors.New("--copilot-cmd is empty")
 	}
 
+	if r.opts.Model != "" {
+		args = append(args, "--model", r.opts.Model)
+	}
+
 	prompt := buildCopilotPrompt(markdown)
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Stdin = strings.NewReader(prompt)
@@ -338,6 +395,10 @@ func (r *runner) runCopilotApply(ctx context.Context, feedback model.Feedback) e
 	}
 	if len(args) == 0 {
 		return errors.New("--copilot-cmd is empty")
+	}
+
+	if r.opts.Model != "" {
+		args = append(args, "--model", r.opts.Model)
 	}
 
 	// Build comprehensive prompt with pattern analysis
@@ -422,27 +483,27 @@ func buildApplyPromptWithAnalysis(comments []model.ReviewComment) string {
 
 	for _, path := range fileGroups.order {
 		fileComments := fileGroups.byFile[path]
-		b.WriteString(fmt.Sprintf("## File: %s\n\n", path))
+		fmt.Fprintf(&b, "## File: %s\n\n", path)
 
 		for _, comment := range fileComments {
 			lineDesc := describeCommentLocation(comment)
 			if lineDesc != "" {
-				b.WriteString(fmt.Sprintf("**%s** ", lineDesc))
+				fmt.Fprintf(&b, "**%s** ", lineDesc)
 			}
 
 			author := strings.TrimSpace(comment.User.Login)
 			if author != "" {
-				b.WriteString(fmt.Sprintf("(@%s)", author))
+				fmt.Fprintf(&b, "(@%s)", author)
 			}
 			b.WriteString(":\n")
 
 			body := strings.TrimSpace(comment.Body)
 			if body != "" {
-				b.WriteString(fmt.Sprintf("> %s\n\n", body))
+				fmt.Fprintf(&b, "> %s\n\n", body)
 			}
 
 			if comment.HTMLURL != "" {
-				b.WriteString(fmt.Sprintf("Reference: %s\n\n", comment.HTMLURL))
+				fmt.Fprintf(&b, "Reference: %s\n\n", comment.HTMLURL)
 			}
 		}
 

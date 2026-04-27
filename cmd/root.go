@@ -17,7 +17,9 @@ var (
 	flagOutput    string
 	flagPostReply string
 	flagCopilot   string
+	flagModel     string
 	flagQuiet     bool
+	flagWatch     bool
 )
 
 var rootCmd = &cobra.Command{
@@ -33,7 +35,9 @@ var rootCmd = &cobra.Command{
 			OutputPath: flagOutput,
 			PostReply:  flagPostReply,
 			CopilotCmd: flagCopilot,
+			Model:      flagModel,
 			Quiet:      flagQuiet,
+			Watch:      flagWatch,
 			Stdout:     os.Stdout,
 			Stderr:     os.Stderr,
 		}
@@ -57,5 +61,7 @@ func init() {
 	rootCmd.Flags().StringVar(&flagOutput, "output", "", "Write Markdown output to the specified file")
 	rootCmd.Flags().StringVar(&flagPostReply, "post-reply", "", "Post the provided text as a new PR comment after fetching feedback")
 	rootCmd.Flags().StringVar(&flagCopilot, "copilot-cmd", "", "Command used when --action is summary or apply (default: copilot, or copilot --allow-all-tools --allow-all-paths for apply)")
+	rootCmd.Flags().StringVar(&flagModel, "model", "", "Model to pass to the copilot command via --model (e.g. claude-sonnet-4.5)")
 	rootCmd.Flags().BoolVar(&flagQuiet, "quiet", false, "Suppress non-essential log output")
+	rootCmd.Flags().BoolVar(&flagWatch, "watch", false, "Poll for feedback every minute, up to 10 minutes, and run the configured action when found (defaults to apply)")
 }
